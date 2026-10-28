@@ -145,3 +145,12 @@ and says:
 - what is done, and what is not.
 
 A fresh clone must work with `uv sync`, then the commands of your README.
+
+
+## Known bugs
+
+- A show after midnight (before 06:00) appears under the next calendar day.
+  Example: `2027-06-12` shows `01:00 | Le Kiosque | After Hours`, but for the
+  festival it is the end of Friday night (a festival day ends at 06:00).
+  Comparing the first 10 characters of the start cannot express this.
+  To be fixed in step 04, with real dates.
