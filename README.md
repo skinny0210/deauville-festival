@@ -149,5 +149,4 @@ A fresh clone must work with `uv sync`, then the commands of your README.
 
 ## Known bugs
 
-- `programme June-11` (or any text that is not a date) ends with a traceback.
-  To be handled in step 05.
+- None known.
