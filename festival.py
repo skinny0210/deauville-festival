@@ -59,7 +59,7 @@ def parse_minutes(text: str) -> int:
 # ---------- classes ----------
 
 
-@dataclass
+@dataclass(eq=False)
 class Venue:
     name: str
     capacity: int
@@ -74,6 +74,15 @@ class Venue:
     def slug(self) -> str:
         return slugify(self.name)
 
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Venue) and self.slug == other.slug
+
+    def __hash__(self) -> int:
+        return hash(self.slug)
+
+    def __str__(self) -> str:
+        return f"{self.slug}: {self.name}, {self.capacity} seats"
+
     def to_view(self) -> dict:
         return {
             "slug": self.slug,
@@ -86,7 +95,7 @@ class Venue:
         return {"name": self.name, "capacity": self.capacity, "address": self.address}
 
 
-@dataclass
+@dataclass(eq=False)
 class Artist:
     name: str
     bio: str = ""
@@ -98,6 +107,15 @@ class Artist:
     @property
     def slug(self) -> str:
         return slugify(self.name)
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Artist) and self.slug == other.slug
+
+    def __hash__(self) -> int:
+        return hash(self.slug)
+
+    def __str__(self) -> str:
+        return self.name
 
     def short_view(self) -> dict:
         return {"slug": self.slug, "name": self.name}
@@ -137,6 +155,13 @@ class Performance:
         self.title = clean_name(self.title, "performance")
         if self.kind not in KINDS:
             raise ValueError(f"'{self.kind}' is not a kind of performance.")
+
+    # ordering: by start, then venue name
+    def __lt__(self, other: "Performance") -> bool:
+        return (self.start, self.venue.name) < (other.start, other.venue.name)
+
+    def __str__(self) -> str:
+        return f"{self.time_range()} | {self.venue.name} | {self.title} ({self.kind})"
 
     # computed from the data
     @property
@@ -187,11 +212,11 @@ class Performance:
 
     # questions
     def involves(self, artist: Artist) -> bool:
-        return any(person.slug == artist.slug for person, _ in self.people)
+        return any(person == artist for person, _ in self.people)
 
     def role_of(self, artist: Artist) -> str:
         for person, role in self.people:
-            if person.slug == artist.slug:
+            if person == artist:
                 return role
         raise ValueError(f"{artist.name} is not on stage in {self.title}.")
 
@@ -206,7 +231,7 @@ class Performance:
         return f"{self.start:%Y-%m-%d %H:%M}-{self.end:%H:%M}"
 
     def programme_line(self) -> str:
-        return f"{self.time_range()} | {self.venue.name} | {self.title} ({self.kind})"
+        return str(self)
 
     def artist_line(self, role: str) -> str:
         return (
@@ -267,6 +292,9 @@ class Performance:
 
 
 class Festival:
+    """Holds venues, artists and the schedule. The only way to change the
+    schedule is add() / remove(), so the rules always apply."""
+
     def __init__(
         self,
         name: str,
@@ -280,9 +308,9 @@ class Festival:
         self.last_day = last_day
         self.venues = venues
         self.artists = artists
-        self.performances: list[Performance] = []
+        self._performances: list[Performance] = []
 
-    # building from the file
+    # building from the file (every rule is checked again)
     @classmethod
     def from_data(cls, data: dict) -> "Festival":
         festival = cls(
@@ -296,7 +324,7 @@ class Festival:
             ],
         )
         for item in data["performances"]:
-            festival.performances.append(festival._build(item))
+            festival.add(festival._build(item))
         return festival
 
     def _build(self, item: dict) -> Performance:
@@ -327,7 +355,7 @@ class Festival:
             "last_day": self.last_day.isoformat(),
             "venues": [v.to_data() for v in self.venues],
             "artists": [a.to_data() for a in self.artists],
-            "performances": [p.to_data() for p in self.performances],
+            "performances": [p.to_data() for p in self._performances],
         }
 
     def to_view(self) -> dict:
@@ -338,11 +366,16 @@ class Festival:
             "days": [day.isoformat() for day in self.days],
         }
 
-    # finding
+    # reading
     @property
     def days(self) -> list[date]:
         count = (self.last_day - self.first_day).days + 1
         return [self.first_day + timedelta(days=i) for i in range(count)]
+
+    @property
+    def performances(self) -> list[Performance]:
+        """A copy: changing it does not change the schedule."""
+        return list(self._performances)
 
     def venue(self, slug: str) -> Venue:
         for venue in self.venues:
@@ -357,7 +390,7 @@ class Festival:
         raise NotFound(f"No artist '{slug}'.")
 
     def performance(self, performance_id: str) -> Performance:
-        for performance in self.performances:
+        for performance in self._performances:
             if performance.id == performance_id:
                 return performance
         raise NotFound(f"No performance with id '{performance_id}'.")
@@ -366,7 +399,7 @@ class Festival:
         return sorted(self.artists, key=lambda a: a.slug)
 
     def sorted_performances(self) -> list[Performance]:
-        return sorted(self.performances, key=lambda p: (p.start, p.venue.name))
+        return sorted(self._performances)
 
     def programme(
         self, day: date | None = None, venue_slug: str | None = None
@@ -403,21 +436,28 @@ class Festival:
         if new.kind == "solo" and not 0 <= new.min_age <= 18:
             raise ValueError("The minimum age of a solo show must be between 0 and 18.")
         if not self.first_day <= new.festival_day <= self.last_day:
-            raise ValueError(f"{new.festival_day.isoformat()} is not a day of the festival.")
+            raise ValueError(
+                f"{new.festival_day.isoformat()} is not a day of the festival."
+            )
 
-        for other in self.performances:
-            if other.venue.slug == new.venue.slug and new.clashes_with(other):
+        for other in self._performances:
+            if other.venue == new.venue and new.clashes_with(other):
                 raise ValueError(
                     f"{new.venue.name} is busy with {other.title} ({other.full_range()}). "
                     "Leave 30 minutes between two shows."
                 )
         for artist, _role in new.people:
-            for other in self.performances:
+            for other in self._performances:
                 if other.involves(artist) and new.clashes_with(other):
                     raise ValueError(
                         f"{artist.name} is on stage in {other.title}. "
                         "Leave 30 minutes between two shows."
                     )
+
+    def add(self, performance: Performance) -> None:
+        """Check every rule, then add. A refused performance changes nothing."""
+        self.check(performance)
+        self._performances.append(performance)
 
     def schedule_solo(
         self,
@@ -437,13 +477,12 @@ class Festival:
             artist=self.artist(artist_slug),
             min_age=min_age,
         )
-        self.check(new)
-        self.performances.append(new)
+        self.add(new)
         return new
 
     def remove(self, performance_id: str) -> Performance:
         performance = self.performance(performance_id)
-        self.performances.remove(performance)
+        self._performances.remove(performance)
         return performance
 
 

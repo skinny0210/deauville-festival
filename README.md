@@ -163,3 +163,5 @@ A fresh clone must work with `uv sync`, then the commands of your README.
   builds the programme, checks the rules (`check`), schedules (`schedule_solo`) and cancels (`remove`).
 - `NotFound(ValueError)`: unknown slug or id. The API turns it into a 404.
 - The file is read once by `Festival.from_data`; after that nobody touches the dicts.
+
+- Festival keeps _performances private; add is the only way in and runs check.

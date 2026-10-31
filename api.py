@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -51,6 +51,16 @@ def get_programme(day: date | None = None, venue: str | None = None) -> list[dic
 @app.get("/api/performances/{performance_id}")
 def get_performance(performance_id: str) -> dict:
     return load_festival().performance(performance_id).to_view()
+
+@app.get("/api/now")
+def get_now(at: datetime | None = None) -> dict:
+    festival = load_festival()
+    moment = at if at is not None else datetime.now()
+    return {
+        "at": moment.strftime("%Y-%m-%dT%H:%M"),
+        "now_playing": [p.to_view() for p in festival.on_stage_at(moment)],
+        "up_next": [p.to_view() for p in festival.next_after(moment, 3)],
+    }
 
 
 # After the routes: "/" would otherwise hide them.
