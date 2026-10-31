@@ -150,3 +150,16 @@ A fresh clone must work with `uv sync`, then the commands of your README.
 ## Known bugs
 
 - None known.
+
+## Design (step 07)
+
+- `Venue`: name, capacity, address. Knows its `slug`. Refuses an empty name and fewer than 1 seat.
+- `Artist`: name, bio, photo. Knows its `slug`.
+- `Performance`: one class for the three kinds for now (`kind` = solo, lineup, workshop).
+  Holds a `Venue` and `Artist` objects, not slugs. Computes `end`, `festival_day`, `id`,
+  `capacity`, `places_left`, `summary`, `people` (artist and role).
+  Methods: `involves(artist)`, `clashes_with(other)`, `to_view()` (API), `to_data()` (file).
+- `Festival`: owns the venues, artists and performances. Finds by slug or id (raises `NotFound`),
+  builds the programme, checks the rules (`check`), schedules (`schedule_solo`) and cancels (`remove`).
+- `NotFound(ValueError)`: unknown slug or id. The API turns it into a 404.
+- The file is read once by `Festival.from_data`; after that nobody touches the dicts.
