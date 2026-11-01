@@ -561,7 +561,7 @@ class Festival:
             )
         new.validate()
         if not self.first_day <= new.festival_day <= self.last_day:
-            raise Invalid(
+            raise Conflict(
                 f"{new.festival_day.isoformat()} is not a day of the festival."
             )
 

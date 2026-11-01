@@ -1,3 +1,5 @@
+import json
+
 from datetime import date, datetime
 from pathlib import Path
 
@@ -46,6 +48,19 @@ def create_app(storage: Storage, web_dir: str = "web") -> FastAPI:
     async def handle_festival_error(request, error: FestivalError) -> JSONResponse:
         status = next((s for t, s in STATUS.items() if isinstance(error, t)), 500)
         return JSONResponse(status_code=status, content={"detail": str(error)})
+    
+    @app.exception_handler(OSError)
+    async def handle_os_error(request, error: OSError) -> JSONResponse:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "The data file cannot be read or written."},
+        )
+
+    @app.exception_handler(json.JSONDecodeError)
+    async def handle_damaged_file(request, error: json.JSONDecodeError) -> JSONResponse:
+        return JSONResponse(
+            status_code=500, content={"detail": "The data file is damaged."}
+        )
 
     # ---------- read ----------
 
