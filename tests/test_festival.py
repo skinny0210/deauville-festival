@@ -3,7 +3,6 @@ from datetime import date, datetime
 import pytest
 
 from deauville.errors import FestivalError
-
 from deauville.model import Festival, NotFound
 
 
@@ -77,7 +76,9 @@ def test_artist_busy_in_another_venue_is_refused(festival):
 
 def test_artist_busy_as_an_act_of_a_lineup_is_refused(festival):
     with pytest.raises(FestivalError, match="Cleo Roy is on stage in Gala"):
-        festival.schedule_solo("X", "cleo-roy", "le-kiosque", at("2027-06-10T21:00"), 30)
+        festival.schedule_solo(
+            "X", "cleo-roy", "le-kiosque", at("2027-06-10T21:00"), 30
+        )
 
 
 def test_refused_performance_changes_nothing(festival):
@@ -113,7 +114,9 @@ def test_early_morning_before_the_first_day_is_refused(festival):
 @pytest.mark.parametrize("minutes", [0, 361])
 def test_duration_out_of_range_is_refused(festival, minutes):
     with pytest.raises(FestivalError, match="between 1 and 360"):
-        festival.schedule_solo("X", "ben-roy", "la-cabane", at("2027-06-13T08:00"), minutes)
+        festival.schedule_solo(
+            "X", "ben-roy", "la-cabane", at("2027-06-13T08:00"), minutes
+        )
 
 
 @pytest.mark.parametrize("minutes", [1, 360])

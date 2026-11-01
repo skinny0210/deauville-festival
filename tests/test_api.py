@@ -25,8 +25,13 @@ def client(data_file):
 
 def solo(start="2027-06-13T11:00", artist="nora-lebrun", venue="le-kiosque"):
     return {
-        "kind": "solo", "title": "Test Show", "venue": venue, "start": start,
-        "duration_minutes": 45, "artist": artist, "min_age": 0,
+        "kind": "solo",
+        "title": "Test Show",
+        "venue": venue,
+        "start": start,
+        "duration_minutes": 45,
+        "artist": artist,
+        "min_age": 0,
     }
 
 
@@ -36,9 +41,7 @@ def solo(start="2027-06-13T11:00", artist="nora-lebrun", venue="le-kiosque"):
 def test_festival(client):
     body = client.get("/api/festival").json()
     assert body["first_day"] == "2027-06-10"
-    assert body["days"] == [
-        "2027-06-10", "2027-06-11", "2027-06-12", "2027-06-13"
-    ]
+    assert body["days"] == ["2027-06-10", "2027-06-11", "2027-06-12", "2027-06-13"]
 
 
 def test_venues_keep_file_order(client):
@@ -130,9 +133,13 @@ def test_artist_busy_is_409(client):
 
 def test_lineup_with_one_act_is_422(client):
     body = {
-        "kind": "lineup", "title": "L", "venue": "la-cabane",
-        "start": "2027-06-13T09:00", "duration_minutes": 60,
-        "host": "tom-vasseur", "acts": ["hugo-lemaire"],
+        "kind": "lineup",
+        "title": "L",
+        "venue": "la-cabane",
+        "start": "2027-06-13T09:00",
+        "duration_minutes": 60,
+        "host": "tom-vasseur",
+        "acts": ["hugo-lemaire"],
     }
     response = client.post("/api/performances", json=body)
     assert response.status_code == 422

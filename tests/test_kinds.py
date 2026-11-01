@@ -3,8 +3,13 @@ from datetime import datetime
 import pytest
 
 from deauville.errors import FestivalError
-
-from deauville.model import Artist, Festival, Lineup, Performance, SoloShow, Venue, Workshop
+from deauville.model import (
+    Festival,
+    Lineup,
+    Performance,
+    SoloShow,
+    Workshop,
+)
 
 
 def at(text: str) -> datetime:
@@ -118,17 +123,26 @@ def test_summaries(festival):
     )
     assert solo.summary == "Eva"
     assert workshop.summary == "with Ana, 3/12 places taken"
-    assert lineup(festival, ["ben", "cleo"], 60).summary == "hosted by Ana, with Ben, Cleo"
+    assert (
+        lineup(festival, ["ben", "cleo"], 60).summary == "hosted by Ana, with Ben, Cleo"
+    )
 
 
 def test_unknown_kind_in_the_file_is_refused():
     data = {
-        "name": "T", "first_day": "2027-06-10", "last_day": "2027-06-13",
+        "name": "T",
+        "first_day": "2027-06-10",
+        "last_day": "2027-06-13",
         "venues": [{"name": "A", "capacity": 10, "address": "x"}],
         "artists": [{"name": "Ana"}],
         "performances": [
-            {"kind": "circus", "title": "X", "venue": "a",
-             "start": "2027-06-11T18:00", "duration_minutes": 30}
+            {
+                "kind": "circus",
+                "title": "X",
+                "venue": "a",
+                "start": "2027-06-11T18:00",
+                "duration_minutes": 30,
+            }
         ],
     }
     with pytest.raises(FestivalError, match="not a kind of performance"):

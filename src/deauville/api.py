@@ -1,9 +1,8 @@
 import json
-
 from datetime import date, datetime
 from pathlib import Path
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -45,19 +44,23 @@ def create_app(storage: Storage, web_dir: str = "web") -> FastAPI:
     app = FastAPI(title="Deauville Festival du Rire")
 
     @app.exception_handler(FestivalError)
-    async def handle_festival_error(request, error: FestivalError) -> JSONResponse:
+    async def handle_festival_error(
+        request: Request, error: FestivalError
+    ) -> JSONResponse:
         status = next((s for t, s in STATUS.items() if isinstance(error, t)), 500)
         return JSONResponse(status_code=status, content={"detail": str(error)})
-    
+
     @app.exception_handler(OSError)
-    async def handle_os_error(request, error: OSError) -> JSONResponse:
+    async def handle_os_error(request: Request, error: OSError) -> JSONResponse:
         return JSONResponse(
             status_code=500,
             content={"detail": "The data file cannot be read or written."},
         )
 
     @app.exception_handler(json.JSONDecodeError)
-    async def handle_damaged_file(request, error: json.JSONDecodeError) -> JSONResponse:
+    async def handle_damaged_file(
+        request: Request, error: json.JSONDecodeError
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=500, content={"detail": "The data file is damaged."}
         )
@@ -89,9 +92,7 @@ def create_app(storage: Storage, web_dir: str = "web") -> FastAPI:
         }
 
     @app.get("/api/programme")
-    def get_programme(
-        day: date | None = None, venue: str | None = None
-    ) -> list[dict]:
+    def get_programme(day: date | None = None, venue: str | None = None) -> list[dict]:
         festival = storage.load()
         return [p.to_view() for p in festival.programme(day=day, venue_slug=venue)]
 

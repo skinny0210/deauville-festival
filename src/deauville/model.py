@@ -6,8 +6,17 @@ from deauville.errors import Conflict, FestivalError, Invalid, NotFound
 from deauville.parsing import clean_name, parse_moment, slugify
 
 __all__ = [
-    "Artist", "Conflict", "Festival", "FestivalError", "Invalid", "Lineup",
-    "NotFound", "Performance", "SoloShow", "Venue", "Workshop",
+    "Artist",
+    "Conflict",
+    "Festival",
+    "FestivalError",
+    "Invalid",
+    "Lineup",
+    "NotFound",
+    "Performance",
+    "SoloShow",
+    "Venue",
+    "Workshop",
 ]
 
 DAY_ENDS_AT = timedelta(hours=6)
@@ -24,6 +33,8 @@ STAMP = "%Y-%m-%dT%H:%M"
 
 @dataclass(eq=False)
 class Venue:
+    """A place where performances happen, identified by its slug."""
+
     name: str
     capacity: int
     address: str
@@ -60,6 +71,8 @@ class Venue:
 
 @dataclass(eq=False)
 class Artist:
+    """A performer, identified by the slug of their name."""
+
     name: str
     bio: str = ""
     photo_url: str = ""
@@ -235,6 +248,8 @@ class Performance(ABC):
 
 
 class SoloShow(Performance):
+    """One artist on stage, with a minimum age for the audience."""
+
     kind = "solo"
 
     def __init__(self, artist: Artist, min_age: int = 0, **common: object) -> None:
@@ -271,6 +286,8 @@ class SoloShow(Performance):
 
 
 class Lineup(Performance):
+    """A host introducing several acts one after another."""
+
     kind = "lineup"
 
     def __init__(self, host: Artist, acts: list[Artist], **common: object) -> None:
@@ -328,6 +345,8 @@ class Lineup(Performance):
 
 
 class Workshop(Performance):
+    """A teacher and registered participants, limited by places."""
+
     kind = "workshop"
 
     def __init__(
@@ -460,7 +479,9 @@ class Festival:
         try:
             performance_class = PERFORMANCE_KINDS[item.get("kind")]
         except KeyError:
-            raise Invalid(f"'{item.get('kind')}' is not a kind of performance.") from None
+            raise Invalid(
+                f"'{item.get('kind')}' is not a kind of performance."
+            ) from None
         try:
             return performance_class.from_data(item, self)
         except KeyError as error:

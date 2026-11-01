@@ -12,4 +12,3 @@ class Conflict(FestivalError):
 
 class Invalid(FestivalError):
     """A value that breaks a rule (422)."""
-    
