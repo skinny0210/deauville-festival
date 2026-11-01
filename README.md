@@ -155,10 +155,9 @@ A fresh clone must work with `uv sync`, then the commands of your README.
 
 - `Venue`: name, capacity, address. Knows its `slug`. Refuses an empty name and fewer than 1 seat.
 - `Artist`: name, bio, photo. Knows its `slug`.
-- `Performance`: one class for the three kinds for now (`kind` = solo, lineup, workshop).
-  Holds a `Venue` and `Artist` objects, not slugs. Computes `end`, `festival_day`, `id`,
-  `capacity`, `places_left`, `summary`, `people` (artist and role).
-  Methods: `involves(artist)`, `clashes_with(other)`, `to_view()` (API), `to_data()` (file).
+- `Performance` (abstract): start, end, festival day, id, ordering, views. Subclasses `SoloShow`,
+  `Lineup`, `Workshop` write `people`, `summary`, `validate` (rules of the kind) and their own
+  fields. The file's `kind` picks the class once, in `PERFORMANCE_KINDS`.
 - `Festival`: owns the venues, artists and performances. Finds by slug or id (raises `NotFound`),
   builds the programme, checks the rules (`check`), schedules (`schedule_solo`) and cancels (`remove`).
 - `NotFound(ValueError)`: unknown slug or id. The API turns it into a 404.
