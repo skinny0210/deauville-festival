@@ -1,16 +1,10 @@
 import json
 import sys
 
-from festival import (
-    Festival,
-    FestivalError,
-    NotFound,
-    load_festival,
-    parse_day,
-    parse_minutes,
-    parse_moment,
-    save_festival,
-)
+from deauville.errors import FestivalError, Invalid, NotFound
+from deauville.model import Festival
+from deauville.parsing import parse_day, parse_minutes, parse_moment
+from deauville.storage import DATA_PATH, JsonStorage, Storage
 
 
 def print_summary(festival: Festival) -> None:
@@ -66,7 +60,7 @@ def print_now(festival: Festival, moment_text: str) -> None:
         print(f"- {performance.programme_line()}")
 
 
-def add_performance(festival: Festival) -> None:
+def add_performance(festival: Festival, storage: Storage) -> None:
     title = input("Title: ").strip()
     artist = input("Artist (slug): ").strip()
     venue = input("Venue (slug): ").strip()
@@ -74,50 +68,75 @@ def add_performance(festival: Festival) -> None:
     minutes = parse_minutes(input("Duration (minutes): ").strip())
 
     new = festival.schedule_solo(title, artist, venue, start, minutes)
-    save_festival(festival)
+    storage.save(festival)
     print(f"Added: {new.id}")
 
 
-def cancel_performance(festival: Festival, wanted_id: str) -> None:
+def cancel_performance(festival: Festival, storage: Storage, wanted_id: str) -> None:
     performance = festival.remove(wanted_id)
-    save_festival(festival)
+    storage.save(festival)
     print(f"Cancelled: {performance.title}")
 
 
+def serve(storage: Storage) -> None:
+    import uvicorn  # only needed by this command
+
+    from deauville.api import create_app
+
+    uvicorn.run(create_app(storage), host="127.0.0.1", port=8000)
+
+
 def print_usage() -> None:
-    print("Usage:")
-    print("  uv run main.py                        summary of the festival")
-    print("  uv run main.py venues                 the venues and their seats")
-    print("  uv run main.py programme YYYY-MM-DD   the programme of a festival day")
-    print("  uv run main.py artist SLUG            the performances of an artist")
-    print("  uv run main.py now YYYY-MM-DDTHH:MM   what is on stage at a moment")
-    print("  uv run main.py add                    schedule a solo show")
-    print("  uv run main.py cancel ID              cancel a performance")
+    print("Usage: deauville [--data FILE] COMMAND")
+    print("  (no command)             summary of the festival")
+    print("  venues                   the venues and their seats")
+    print("  programme YYYY-MM-DD     the programme of a festival day")
+    print("  artist SLUG              the performances of an artist")
+    print("  now YYYY-MM-DDTHH:MM     what is on stage at a moment")
+    print("  add                      schedule a solo show")
+    print("  cancel ID                cancel a performance")
+    print("  serve                    start the website and the API")
 
 
-def run(argv: list[str]) -> None:
-    festival = load_festival()
-    if len(argv) == 1:
+def take_option(args: list[str], name: str, default: str) -> tuple[str, list[str]]:
+    """Remove `name VALUE` from args and return (value, remaining args)."""
+    if name not in args:
+        return default, args
+    index = args.index(name)
+    if index + 1 >= len(args):
+        raise Invalid(f"{name} needs a value.")
+    value = args[index + 1]
+    return value, args[:index] + args[index + 2 :]
+
+
+def run(args: list[str], storage: Storage) -> None:
+    if args == ["serve"]:
+        serve(storage)
+        return
+    festival = storage.load()
+    if not args:
         print_summary(festival)
-    elif argv[1] == "venues" and len(argv) == 2:
+    elif args[0] == "venues" and len(args) == 1:
         print_venues(festival)
-    elif argv[1] == "programme" and len(argv) == 3:
-        print_programme(festival, argv[2])
-    elif argv[1] == "artist" and len(argv) == 3:
-        print_artist(festival, argv[2])
-    elif argv[1] == "now" and len(argv) == 3:
-        print_now(festival, argv[2])
-    elif argv[1] == "add" and len(argv) == 2:
-        add_performance(festival)
-    elif argv[1] == "cancel" and len(argv) == 3:
-        cancel_performance(festival, argv[2])
+    elif args[0] == "programme" and len(args) == 2:
+        print_programme(festival, args[1])
+    elif args[0] == "artist" and len(args) == 2:
+        print_artist(festival, args[1])
+    elif args[0] == "now" and len(args) == 2:
+        print_now(festival, args[1])
+    elif args[0] == "add" and len(args) == 1:
+        add_performance(festival, storage)
+    elif args[0] == "cancel" and len(args) == 2:
+        cancel_performance(festival, storage, args[1])
     else:
         print_usage()
 
 
-def main(argv: list[str]) -> None:
+def main(argv: list[str] | None = None) -> None:
+    args = list(sys.argv[1:] if argv is None else argv)
     try:
-        run(argv)
+        path, args = take_option(args, "--data", DATA_PATH)
+        run(args, JsonStorage(path))
     except FileNotFoundError as error:
         print(f"Error: file not found: {error.filename}.")
         sys.exit(1)
@@ -130,4 +149,4 @@ def main(argv: list[str]) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()

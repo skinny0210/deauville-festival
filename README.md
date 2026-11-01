@@ -158,9 +158,20 @@ A fresh clone must work with `uv sync`, then the commands of your README.
 - `Performance` (abstract): start, end, festival day, id, ordering, views. Subclasses `SoloShow`,
   `Lineup`, `Workshop` write `people`, `summary`, `validate` (rules of the kind) and their own
   fields. The file's `kind` picks the class once, in `PERFORMANCE_KINDS`.
-- `Festival`: owns the venues, artists and performances. Finds by slug or id (raises `NotFound`),
-  builds the programme, checks the rules (`check`), schedules (`schedule_solo`) and cancels (`remove`).
-- `NotFound(ValueError)`: unknown slug or id. The API turns it into a 404.
+- `Festival`: owns the venues, artists and performances, which are private (`_venues`,
+  `_artists`, `_performances`) and read through copies. Finds by slug or id (raises `NotFound`),
+  builds the programme, and is the only way to change the schedule: `add`, `replace`, `remove`,
+  `register`, `add_artist` all run the rules (`check`). It does not know where it is stored.
+- Errors (`errors.py`): `FestivalError` is the family; `NotFound` (404), `Conflict` (409),
+  `Invalid` (422). The command line catches the family, the API maps each type to a status.
 - The file is read once by `Festival.from_data`; after that nobody touches the dicts.
 
 - Festival keeps _performances private; add is the only way in and runs check.
+
+## Structure (step 11)
+
+- `src/deauville/`: `errors.py`, `parsing.py`, `model.py` (Venue, Artist, Performance and
+  its kinds, Festival), `storage.py` (`Storage` interface, `JsonStorage`, `MemoryStorage`),
+  `api.py` (`create_app(storage)`), `cli.py` (commands, `--data`, `serve`).
+- Run: `uv run deauville ...`, tests: `uv run pytest`, build: `uv build`.
+- Limit: `serve` reads `web/` from the current folder, so run it from the project root.

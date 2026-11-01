@@ -1,11 +1,15 @@
-import json
-import re
-import unicodedata
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
-DATA_PATH = "data/festival.json"
+from deauville.errors import Conflict, FestivalError, Invalid, NotFound
+from deauville.parsing import clean_name, parse_moment, slugify
+
+__all__ = [
+    "Artist", "Conflict", "Festival", "FestivalError", "Invalid", "Lineup",
+    "NotFound", "Performance", "SoloShow", "Venue", "Workshop",
+]
+
 DAY_ENDS_AT = timedelta(hours=6)
 GAP = timedelta(minutes=30)
 MIN_DURATION = 1
@@ -13,64 +17,6 @@ MAX_DURATION = 360
 ACT_MINUTES = 10  # each act of a lineup
 HOST_MINUTES = 3  # the host, between two acts
 STAMP = "%Y-%m-%dT%H:%M"
-
-
-# ---------- errors ----------
-
-
-class FestivalError(Exception):
-    """Base of every error of the festival: the message is a sentence."""
-
-
-class NotFound(FestivalError):
-    """A slug or an id that does not exist (404)."""
-
-
-class Conflict(FestivalError):
-    """Valid request, but it clashes with the schedule or the state (409)."""
-
-
-class Invalid(FestivalError):
-    """A value that breaks a rule (422)."""
-
-
-# ---------- helpers ----------
-
-
-def slugify(text: str) -> str:
-    """'Théâtre des Planches' -> 'theatre-des-planches'."""
-    ascii_text = (
-        unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
-    )
-    return re.sub(r"[^a-z0-9]+", "-", ascii_text.lower()).strip("-")
-
-
-def clean_name(value: str, what: str) -> str:
-    name = value.strip()
-    if not name:
-        raise Invalid(f"A {what} name cannot be empty.")
-    return name
-
-
-def parse_day(text: str) -> date:
-    try:
-        return date.fromisoformat(text)
-    except ValueError:
-        raise Invalid(f"'{text}' is not a day, use YYYY-MM-DD.") from None
-
-
-def parse_moment(text: str) -> datetime:
-    try:
-        return datetime.fromisoformat(text)
-    except ValueError:
-        raise Invalid(f"'{text}' is not a moment, use YYYY-MM-DDTHH:MM.") from None
-
-
-def parse_minutes(text: str) -> int:
-    try:
-        return int(text)
-    except ValueError:
-        raise Invalid(f"'{text}' is not a number of minutes.") from None
 
 
 # ---------- venues and artists ----------
@@ -171,7 +117,6 @@ class Performance(ABC):
         self.duration_minutes = duration_minutes
         self.description = description
 
-    # --- what each kind must write ---
     @property
     @abstractmethod
     def people(self) -> list[tuple[Artist, str]]:
@@ -197,7 +142,6 @@ class Performance(ABC):
     @abstractmethod
     def from_data(cls, item: dict, festival: "Festival") -> "Performance": ...
 
-    # --- common ---
     @staticmethod
     def common_fields(item: dict, festival: "Festival") -> dict:
         return {
@@ -476,8 +420,9 @@ PERFORMANCE_KINDS: dict[str, type[Performance]] = {
 
 
 class Festival:
-    """Holds venues, artists and the schedule. Collections are private: the only
-    way to change them is through the methods below, which apply the rules."""
+    """Holds venues, artists and the schedule. It does not know where it is
+    stored (see storage.py). Collections are private: the only way to change
+    them is through the methods below, which apply the rules."""
 
     def __init__(
         self,
@@ -689,17 +634,3 @@ class Festival:
         )
         self.add(new)
         return new
-
-
-# ---------- storage ----------
-
-
-def load_festival(path: str = DATA_PATH) -> Festival:
-    with open(path, encoding="utf-8") as file:
-        return Festival.from_data(json.load(file))
-
-
-def save_festival(festival: Festival, path: str = DATA_PATH) -> None:
-    with open(path, "w", encoding="utf-8") as file:
-        json.dump(festival.to_data(), file, ensure_ascii=False, indent=2)
-        file.write("\n")

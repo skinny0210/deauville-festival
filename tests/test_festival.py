@@ -2,9 +2,9 @@ from datetime import date, datetime
 
 import pytest
 
-from festival import FestivalError
+from deauville.errors import FestivalError
 
-from festival import Festival, NotFound
+from deauville.model import Festival, NotFound
 
 
 @pytest.fixture

@@ -2,7 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from festival import Conflict, Festival, Invalid, NotFound, SoloShow
+from deauville.errors import Conflict, Invalid, NotFound
+from deauville.model import Festival, SoloShow
 
 
 def at(text):

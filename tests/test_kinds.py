@@ -2,9 +2,9 @@ from datetime import datetime
 
 import pytest
 
-from festival import FestivalError
+from deauville.errors import FestivalError
 
-from festival import Artist, Festival, Lineup, Performance, SoloShow, Venue, Workshop
+from deauville.model import Artist, Festival, Lineup, Performance, SoloShow, Venue, Workshop
 
 
 def at(text: str) -> datetime:
