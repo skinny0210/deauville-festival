@@ -2,6 +2,8 @@ from datetime import datetime
 
 import pytest
 
+from festival import FestivalError
+
 from festival import Artist, Festival, Lineup, Performance, SoloShow, Venue, Workshop
 
 
@@ -50,7 +52,7 @@ def test_a_bare_performance_cannot_be_created(festival):
 
 @pytest.mark.parametrize("age", [-1, 19])
 def test_solo_age_out_of_range_is_refused(festival, age):
-    with pytest.raises(ValueError, match="between 0 and 18"):
+    with pytest.raises(FestivalError, match="between 0 and 18"):
         SoloShow(artist=festival.artist("ana"), min_age=age, **common(festival))
 
 
@@ -60,28 +62,28 @@ def test_solo_age_limits_are_accepted(festival, age):
 
 
 def test_lineup_of_3_acts_needs_36_minutes(festival):
-    with pytest.raises(ValueError, match="at least 36 minutes"):
+    with pytest.raises(FestivalError, match="at least 36 minutes"):
         lineup(festival, ["ben", "cleo", "dan"], 35)
     festival.add(lineup(festival, ["ben", "cleo", "dan"], 36))
 
 
 def test_lineup_needs_two_acts(festival):
-    with pytest.raises(ValueError, match="at least 2 acts"):
+    with pytest.raises(FestivalError, match="at least 2 acts"):
         lineup(festival, ["ben"], 60)
 
 
 def test_lineup_act_only_once(festival):
-    with pytest.raises(ValueError, match="twice"):
+    with pytest.raises(FestivalError, match="twice"):
         lineup(festival, ["ben", "ben"], 60)
 
 
 def test_lineup_host_is_not_an_act(festival):
-    with pytest.raises(ValueError, match="not an act"):
+    with pytest.raises(FestivalError, match="not an act"):
         lineup(festival, ["ana", "ben"], 60)
 
 
 def test_workshop_needs_one_place(festival):
-    with pytest.raises(ValueError, match="at least 1 place"):
+    with pytest.raises(FestivalError, match="at least 1 place"):
         Workshop(teacher=festival.artist("ana"), max_participants=0, **common(festival))
 
 
@@ -99,10 +101,10 @@ def test_workshop_registration_ignores_case_and_stops_when_full(festival):
         teacher=festival.artist("ana"), max_participants=2, **common(festival)
     )
     workshop.register("Camille R.")
-    with pytest.raises(ValueError, match="already registered"):
+    with pytest.raises(FestivalError, match="already registered"):
         workshop.register("camille r.")
     workshop.register("Yanis B.")
-    with pytest.raises(ValueError, match="full"):
+    with pytest.raises(FestivalError, match="full"):
         workshop.register("Lou M.")
 
 
@@ -129,5 +131,5 @@ def test_unknown_kind_in_the_file_is_refused():
              "start": "2027-06-11T18:00", "duration_minutes": 30}
         ],
     }
-    with pytest.raises(ValueError, match="not a kind of performance"):
+    with pytest.raises(FestivalError, match="not a kind of performance"):
         Festival.from_data(data)

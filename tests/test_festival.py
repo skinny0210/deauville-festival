@@ -2,6 +2,8 @@ from datetime import date, datetime
 
 import pytest
 
+from festival import FestivalError
+
 from festival import Festival, NotFound
 
 
@@ -57,30 +59,30 @@ def at(text: str) -> datetime:
 
 
 def test_venue_busy_is_refused(festival):
-    with pytest.raises(ValueError, match="Le Kiosque is busy with Late Laughs"):
+    with pytest.raises(FestivalError, match="Le Kiosque is busy with Late Laughs"):
         festival.schedule_solo("X", "ben-roy", "le-kiosque", at("2027-06-12T00:15"), 30)
 
 
 def test_venue_gap_is_exactly_30_minutes(festival):
     # Late Laughs ends at 00:30: 01:00 is allowed, 00:59 is not.
     festival.schedule_solo("OK", "ben-roy", "le-kiosque", at("2027-06-12T01:00"), 30)
-    with pytest.raises(ValueError, match="busy"):
+    with pytest.raises(FestivalError, match="busy"):
         festival.schedule_solo("No", "dan-roy", "le-kiosque", at("2027-06-12T00:59"), 5)
 
 
 def test_artist_busy_in_another_venue_is_refused(festival):
-    with pytest.raises(ValueError, match="Ana Roy is on stage in Late Laughs"):
+    with pytest.raises(FestivalError, match="Ana Roy is on stage in Late Laughs"):
         festival.schedule_solo("X", "ana-roy", "la-cabane", at("2027-06-11T23:45"), 30)
 
 
 def test_artist_busy_as_an_act_of_a_lineup_is_refused(festival):
-    with pytest.raises(ValueError, match="Cleo Roy is on stage in Gala"):
+    with pytest.raises(FestivalError, match="Cleo Roy is on stage in Gala"):
         festival.schedule_solo("X", "cleo-roy", "le-kiosque", at("2027-06-10T21:00"), 30)
 
 
 def test_refused_performance_changes_nothing(festival):
     before = len(festival.performances)
-    with pytest.raises(ValueError):
+    with pytest.raises(FestivalError):
         festival.schedule_solo("X", "ana-roy", "la-cabane", at("2027-06-11T23:45"), 30)
     assert len(festival.performances) == before
 
@@ -98,19 +100,19 @@ def test_show_at_one_am_belongs_to_the_previous_day(festival):
 
 
 def test_day_after_the_festival_is_refused(festival):
-    with pytest.raises(ValueError, match="2027-06-14 is not a day of the festival"):
+    with pytest.raises(FestivalError, match="2027-06-14 is not a day of the festival"):
         festival.schedule_solo("X", "ben-roy", "la-cabane", at("2027-06-14T08:00"), 30)
 
 
 def test_early_morning_before_the_first_day_is_refused(festival):
     # 03:00 on 10 June is still 9 June for the festival.
-    with pytest.raises(ValueError, match="not a day of the festival"):
+    with pytest.raises(FestivalError, match="not a day of the festival"):
         festival.schedule_solo("X", "ben-roy", "la-cabane", at("2027-06-10T03:00"), 30)
 
 
 @pytest.mark.parametrize("minutes", [0, 361])
 def test_duration_out_of_range_is_refused(festival, minutes):
-    with pytest.raises(ValueError, match="between 1 and 360"):
+    with pytest.raises(FestivalError, match="between 1 and 360"):
         festival.schedule_solo("X", "ben-roy", "la-cabane", at("2027-06-13T08:00"), minutes)
 
 

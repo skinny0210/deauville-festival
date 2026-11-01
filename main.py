@@ -3,6 +3,7 @@ import sys
 
 from festival import (
     Festival,
+    FestivalError,
     NotFound,
     load_festival,
     parse_day,
@@ -123,7 +124,7 @@ def main(argv: list[str]) -> None:
     except json.JSONDecodeError as error:
         print(f"Error: the data file is damaged ({error}).")
         sys.exit(1)
-    except (ValueError, KeyError) as error:
+    except (FestivalError, KeyError) as error:
         print(f"Error: {error}")
         sys.exit(1)
 
